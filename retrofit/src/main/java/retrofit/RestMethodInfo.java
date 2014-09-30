@@ -107,6 +107,7 @@ final class RestMethodInfo {
   // Parameter-level details
   String[] requestParamNames;
   ParamUsage[] requestParamUsage;
+  Annotation[] requestParamAnnotations;
 
   RestMethodInfo(Method method) {
     this.method = method;
@@ -336,6 +337,8 @@ final class RestMethodInfo {
     requestParamNames = paramNames;
     ParamUsage[] paramUsage = new ParamUsage[count];
     requestParamUsage = paramUsage;
+    Annotation[] paramAnnotations = new Annotation[count];
+    requestParamAnnotations = paramAnnotations;
 
     boolean gotField = false;
     boolean gotPart = false;
@@ -347,6 +350,13 @@ final class RestMethodInfo {
       if (parameterAnnotations != null) {
         for (Annotation parameterAnnotation : parameterAnnotations) {
           Class<? extends Annotation> annotationType = parameterAnnotation.annotationType();
+
+          if (paramAnnotations[i] != null) {
+            throw parameterError(i,
+                "Multiple Retrofit annotations found, only one allowed: @%s, @%s.",
+                paramAnnotations[i].annotationType().getSimpleName(),
+                annotationType.getSimpleName());
+          }
 
           if (annotationType == Path.class) {
             String name = ((Path) parameterAnnotation).value();
@@ -439,7 +449,12 @@ final class RestMethodInfo {
 
             gotBody = true;
             paramUsage[i] = ParamUsage.BODY;
+          } else {
+            // This is a non-Retrofit annotation. Skip to the next one.
+            continue;
           }
+
+          paramAnnotations[i] = parameterAnnotation;
         }
       }
 
